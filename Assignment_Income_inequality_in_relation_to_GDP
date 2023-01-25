@@ -1,0 +1,45 @@
+import pandas as pd
+import numpy as np
+
+# reading in the csv files and cleaning the data I don't need
+url_gini = 'https://raw.githubusercontent.com/Twoltinge/Data/main/economic-inequality-gini-index.csv'
+url_gdp = 'https://raw.githubusercontent.com/Twoltinge/Data/main/gdp-per-capita-maddison-2020.csv'
+df_gini = pd.read_csv(url_gini)
+df_gdp = pd.read_csv(url_gdp)
+df_gini = df_gini.rename(columns={'Gini coefficient': 'Gini'})
+df_gdp = df_gdp.rename(columns={'GDP per capita': 'GDP'})
+df_gini = df_gini.drop(columns=['Code'])
+df_gdp = df_gdp.drop(columns=['Code', '417485-annotations'])
+
+# Merge dataframes on columns and rows that are present in both dataframes
+df_gdp_gini = pd.merge(df_gdp, df_gini, on=['Entity', 'Year'])
+
+# Group, calculate correlation and shrink the dataframe
+df_gdp_gini = df_gdp_gini.groupby('Entity')[['GDP','Gini']].corr()
+df_gdp_gini = df_gdp_gini.reset_index()
+df_gdp_gini = df_gdp_gini.round(decimals=3)
+df_gdp_gini = df_gdp_gini[::2].reset_index()
+df_gdp_gini = df_gdp_gini.drop(columns=['level_1', 'GDP', 'index'])
+df_gdp_gini = df_gdp_gini.rename(columns={'Gini': 'r'})
+display(df_gdp_gini)
+print('\n')
+
+
+# Calculate the number of and the percentage of high, moderate and low correlation
+perc_high = ((sum(df_gdp_gini['r'] >= 0.5)) / len(df_gdp_gini.index) * 100) + ((sum(df_gdp_gini['r'] <= -0.5)) / len(df_gdp_gini.index) * 100)
+perc_moderate = ((sum((df_gdp_gini['r'] >= 0.3) & (df_gdp_gini['r'] <= 0.49))) / len(df_gdp_gini.index) * 100) + ((sum((df_gdp_gini['r'] <= -0.3) & (df_gdp_gini['r'] >= -0.49))) / len(df_gdp_gini.index) * 100)
+perc_low = ((sum((df_gdp_gini['r'] > 0) & (df_gdp_gini['r'] <= 0.29))) / len(df_gdp_gini.index) * 100) + ((sum((df_gdp_gini['r'] < 0) & (df_gdp_gini['r'] >= -0.29))) / len(df_gdp_gini.index) * 100)
+
+high = (sum(df_gdp_gini['r'] >= 0.5)) + (sum(df_gdp_gini['r'] <= -0.5))
+moderate = (sum((df_gdp_gini['r'] >= 0.3) & (df_gdp_gini['r'] <= 0.49))) + (sum((df_gdp_gini['r'] <= -0.3) & (df_gdp_gini['r'] >= -0.49)))
+low = (sum((df_gdp_gini['r'] > 0) & (df_gdp_gini['r'] <= 0.29))) + (sum((df_gdp_gini['r'] < 0) & (df_gdp_gini['r'] >= -0.29)))
+
+# Print the values
+print(f'The percentage of values that have a strong correlation is:  {perc_high}')
+print(f'The number of values that have a strong correlation is: {high}')
+print('\n')
+print(f'The percentage of values that have a medium correlation is:  {perc_moderate}')
+print(f'The number of values that have a medium correlation is: {moderate}')
+print('\n')
+print(f'The percentage of values that have a small correlation is:  {perc_low}')
+print(f'The number of values that have a small correlation is: {low}')
